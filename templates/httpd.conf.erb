@@ -1,0 +1,37 @@
+ScriptAlias /icinga/cgi-bin "/usr/share/icinga/cgi"
+
+<Directory "/usr/share/icinga/cgi">
+#  SSLRequireSSL
+   Options ExecCGI
+   AllowOverride None
+   Order allow,deny
+   Allow from all
+#  Order deny,allow
+#  Deny from all
+#  Allow from 127.0.0.1
+<% if ! authentication.to_s.empty? -%>
+   AuthName "Icinga Access"
+   AuthType Basic
+   AuthUserFile /etc/icinga/htpasswd.users
+   Require valid-user
+<% end -%>
+</Directory>
+
+Alias /icinga "/usr/share/icinga/"
+
+<Directory "/usr/share/icinga/">
+#  SSLRequireSSL
+   Options None
+   AllowOverride None
+   Order allow,deny
+   Allow from all
+#  Order deny,allow
+#  Deny from all
+#  Allow from 127.0.0.1
+<% if ! authentication.to_s.empty? -%>
+   AuthName "Icinga Access"
+   AuthType Basic
+   AuthUserFile /etc/icinga/htpasswd.users
+   Require valid-user
+<% end -%>
+</Directory>
