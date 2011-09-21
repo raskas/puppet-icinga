@@ -285,7 +285,9 @@ class icinga::nagios-plugins-ping {
 
   nagios_command {
     "check_ping_remote":
-      command_line => "\$USER1$/check_nrpe -H \$HOSTADDRESS$ -c check_ping -a \$ARG1$";
+      command_line => "\$USER1$/check_nrpe -H \$HOSTADDRESS$ -c check_ping  -t 30 -a \$ARG1$";
+    "check_ping6_remote":
+      command_line => "\$USER1$/check_nrpe -H \$HOSTADDRESS$ -c check_ping6 -t 30 -a \$ARG1$";
   }
 
 }
