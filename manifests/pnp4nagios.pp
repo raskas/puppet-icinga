@@ -1,4 +1,6 @@
-class icinga::pnp4nagios {
+class icinga::pnp4nagios ( $mode     = undef,
+                           $rra_step = 60,
+                           $rra      = ["1:2880", "5:2880", "30:4320","360:5840"]) {
 
   include httpd
 
@@ -8,12 +10,13 @@ class icinga::pnp4nagios {
     "php-common":
       ensure => installed;
     "php":
-      ensure => installed;
+      ensure => installed,
+      notify => Service["httpd"];
     "php-gd":
       ensure => installed;
   }
 
-  if $pnp4nagios_mode == "bulk" {
+  if $mode == "bulk" {
 
     nagios_command {
       "process-service-perfdata-file":
@@ -36,6 +39,11 @@ class icinga::pnp4nagios {
       register   => 0;
   }
 
+  nagios_command {
+    "check_pnp_rrds":
+      command_line => "\$USER1$/check_nrpe -H \$HOSTADDRESS$ -c check_pnp_rrds";
+  }
+
   file {
     "/etc/httpd/conf.d/pnp4nagios.conf":
       owner   => "root",
@@ -43,6 +51,28 @@ class icinga::pnp4nagios {
       mode    => "0644",
       content => template("icinga/pnp4nagios.conf.erb"),
       notify  => Service["httpd"];
+    "/usr/local/pnp4nagios/etc/rra.cfg":
+      owner   => "icinga",
+      group   => "icinga",
+      mode    => "0644",
+      content => template("icinga/pnp4nagios_rra.cfg.erb");
   }
 
 }
+
+define pnp4nagios::page ( $use_regex = 0,
+                          $page_name,
+                          $page_category,
+                          $graphs) {
+
+  file {
+    "/usr/local/pnp4nagios/etc/pages/$name.cfg":
+      owner   => "icinga",
+      group   => "icinga",
+      mode    => "0644",
+      content => template("icinga/pnp4nagios_pages.cfg.erb"),
+      require => Package["pnp4nagios"];
+  }
+
+}
+

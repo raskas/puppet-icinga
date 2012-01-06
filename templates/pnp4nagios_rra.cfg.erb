@@ -1,0 +1,14 @@
+#
+# Define the default RRA Step in seconds
+# More Infos on
+# http://oss.oetiker.ch/rrdtool/doc/rrdcreate.en.html
+#
+RRA_STEP=<%= rra_step %>
+
+<% rra.flatten.each do |x| -%>
+RRA:AVERAGE:0.5:<%= x %>
+RRA:MAX:0.5:<%= x %>
+RRA:MIN:0.5:<%= x %>
+
+<% end -%>
+

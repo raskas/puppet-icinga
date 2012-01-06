@@ -1,8 +1,15 @@
 
-class icinga ( $pnp4nagios_mode = undef ) {
+class icinga ( $pnp4nagios_mode = undef,
+               $pnp4nagios_rra_step = undef,
+               $pnp4nagios_rra = undef ) {
 
   if $pnp4nagios_mode {
-    include icinga::pnp4nagios
+    class {
+      "icinga::pnp4nagios":
+        mode     => $pnp4nagios_mode,
+        rra_step => $pnp4nagios_rra_step,
+        rra      => $pnp4nagios_rra;
+    }
   }
 
   # Setting the authenticaton variable to an empty string
@@ -59,7 +66,7 @@ class icinga ( $pnp4nagios_mode = undef ) {
       owner   => "icinga",
       group   => "icinga",
       mode    => "0664",
-      source  => "puppet:///icinga/resource.cfg",
+      source  => "puppet:///modules/icinga/resource.cfg",
       notify  => Service["icinga"],
       require => Package["icinga"];
     "/etc/nagios":
@@ -74,7 +81,7 @@ class icinga ( $pnp4nagios_mode = undef ) {
       owner   => "icinga",
       group   => "icinga",
       mode    => "0664",
-      source  => "puppet:///icinga/templates.cfg",
+      source  => "puppet:///modules/icinga/templates.cfg",
       notify  => Service["icinga"];
     "/etc/nagios/nagios_host.cfg":
       owner   => "icinga",
@@ -103,10 +110,10 @@ class icinga ( $pnp4nagios_mode = undef ) {
       purge => true;
   }
 
-  nagios_hostgroup {
-    "linux":
-      ensure => present;
-  }
+#  nagios_hostgroup {
+#    "linux":
+#      ensure => present;
+#  }
 
 }
 
@@ -135,7 +142,7 @@ class icinga::nagios-plugins-snmp {
 
   nagios_command {
     "check_snmp_int":
-      command_line => "\$USER1$/check_snmp_int -H \$HOSTADDRESS$ -C public -n \$ARG1$ -w 0,0 -c 0,0 -r -k -Y -f -B -d 60";
+      command_line => "\$USER1$/check_snmp_int -H \$HOSTADDRESS$ -C public -n \$ARG1$ -w 0,0 -c 0,0 -r -k -Y -f -B -d 60 \$ARG2$";
     "check_snmp_load":
       command_line => "\$USER1$/check_snmp_load -H \$HOSTADDRESS$ -C public -T cisco -w 80,80,80 -c 90,90,90 -f";
     "check_snmp_mem":
@@ -153,15 +160,21 @@ class icinga::nagios-plugins-ntc {
       ensure => installed;
   }
 
+  # semscmd
   nagios_command {
     "check_AMP_loggedonsits":
-      command_line => "/usr/bin/perl \$USER1$/check_semscmd --host \$HOSTNAME$ --statistic ntcSeEqAmpLonSits --description \"Logged on sits\" \$ARG1$";
+      command_line => "/usr/bin/perl \$USER1$/check_semscmd --host \$HOSTADDRESS$ --statistic ntcSeEqAmpLonSits --description \"Logged on sits\" --instances 2";
     "check_active_chain":
       command_line => "/usr/bin/perl \$USER1$/check_semscmd --host CA_SS_ --statistic 1.ntcSeSsChainSelection --description \"Current active chain (1=A, 2=B)\"";
     "check_BDM_clippingratio":
-      command_line => "/usr/bin/perl \$USER1$/check_semscmd --host \$HOSTNAME$ --statistic ntcSeEqBuDemALCRatioDb2 --description \"Clipping ratio\" --unit dB \$ARG1$";
+      command_line => "/usr/bin/perl \$USER1$/check_semscmd --host \$HOSTADDRESS$ --statistic ntcSeEqBuDemALCRatioDb2 --description \"Clipping ratio\" --unit dB";
     "check_BDM_tunergainoffset":
-      command_line => "/usr/bin/perl \$USER1$/check_semscmd --host \$HOSTNAME$ --statistic ntcSeEqBuDemTunerOffset --description \"Tuner gain offset\" \$ARG1$";
+      command_line => "/usr/bin/perl \$USER1$/check_semscmd --host \$HOSTADDRESS$ --statistic ntcSeEqBuDemTunerOffset --description \"Tuner gain offset\"";
+    "check_FWMOD_PLefficiency":
+      command_line => "/usr/bin/perl \$USER1$/check_semscmd --host \$HOSTADDRESS$ --statistic ntcSeEqMoPLEfficiency --description \"PL efficiency\" --unit \"%\"";
+  }
+
+  nagios_command {
     "check_cpu_usage":
       command_line => "\$USER1$/check_nrpe -H \$HOSTADDRESS$ -c check_cpu_usage";
     "check_mem_usage":
@@ -170,6 +183,8 @@ class icinga::nagios-plugins-ntc {
       command_line => "\$USER1$/check_nrpe -H \$HOSTADDRESS$ -c check_whoami";
     "check_java_memory":
       command_line => "\$USER1$/check_nrpe -H \$HOSTADDRESS$ -c check_java_memory -a \$ARG1$";
+    "check_process_status":
+      command_line => "\$USER1$/check_nrpe -H \$HOSTADDRESS$ -c check_process_status -a \$ARG1$";
   }
 
 }
@@ -304,6 +319,55 @@ class icinga::nagios-plugins-nrpe {
   nagios_command {
     "check_nrpe":
       command_line => "\$USER1$/check_nrpe -H \$HOSTADDRESS$";
+  }
+
+}
+
+class icinga::nagios-plugins-file_age {
+
+  include icinga::nagios-plugins-nrpe
+
+  nagios_command {
+    "check_file_age":
+      command_line => "\$USER1$/check_nrpe -H \$HOSTADDRESS$ -c check_file_age -a \$ARG1$ \$ARG2$ \$ARG3$ \$ARG4$ \$ARG5$ ";
+  }
+
+}
+
+class icinga::nagios-plugins-hpbladechassis {
+
+  include icinga
+
+  package {
+    "nagios-plugins-hpbladechassis":
+      ensure => installed;
+  }
+
+  nagios_command {
+    "check_hp_bladechassis":
+      command_line => "/usr/bin/perl \$USER1$/check_hp_bladechassis -H \$HOSTADDRESS$ --port 10601 -C public --perfdata";
+  }
+
+}
+
+class icinga::nagios-plugins-nrpe-tellitec {
+
+  include icinga::nagios-plugins-nrpe
+
+  nagios_command {
+    "check_tc-shape-server_shaping-ratio":
+      command_line => "\$USER1$/check_nrpe -H \$HOSTADDRESS$ -c check_tc-shape-server_shaping-ratio -a \$ARG1$ \$ARG2$";
+  }
+
+}
+
+class icinga::nagios-plugins-hpasm {
+
+  include icinga::nagios-plugins-nrpe
+
+  nagios_command {
+    "check_hpasm":
+      command_line => "\$USER1$/check_nrpe -H \$HOSTADDRESS$ -c check_hpasm";
   }
 
 }

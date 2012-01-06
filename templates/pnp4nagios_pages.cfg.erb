@@ -1,0 +1,16 @@
+define page {
+        use_regex       <%= use_regex %>
+        page_name       <%= page_name %>
+        page_category   <%= page_category %>
+}
+
+<% graphs.each do |graph| -%>
+define graph {
+        host_name       <%= graph["host_name"] %>
+        service_desc    <%= graph["service_desc"] %>
+<% if ! graph["source"].nil? -%>
+        source          <%= graph["source"] %>
+<% end -%>
+}
+
+<% end -%>
